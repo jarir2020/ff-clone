@@ -49,8 +49,8 @@ class UserController extends Controller
         $name =  time().'-'.$image->getClientOriginalName();
         $name = preg_replace('"\.(jpg|jpeg|png|webp)$"', '.webp',$name);
         $name = strtolower(preg_replace('/\s+/', '-', $name));
-        $uploadpath = 'public/uploads/users/';
-        $imageUrl = $uploadpath.$name; 
+        $uploadpath = public_path('uploads/users'); File::ensureDirectoryExists($uploadpath);
+        $imageUrl = 'uploads/users/'.$name;
         $img=Image::make($image->getRealPath());
         $img->encode('webp', 90);
         $width = 100;
@@ -59,7 +59,7 @@ class UserController extends Controller
         $img->resize($width, $height, function ($constraint) {
             $constraint->aspectRatio();
         });
-        $img->save($imageUrl);
+        $img->save($uploadpath . DIRECTORY_SEPARATOR . $name);
 
         $input = $request->all();
         $input['password'] = Hash::make($input['password']);
@@ -108,8 +108,8 @@ class UserController extends Controller
             $name =  time().'-'.$image->getClientOriginalName();
             $name = preg_replace('"\.(jpg|jpeg|png|webp)$"', '.webp',$name);
             $name = strtolower(preg_replace('/\s+/', '-', $name));
-            $uploadpath = 'public/uploads/users/';
-            $imageUrl = $uploadpath.$name; 
+            $uploadpath = public_path('uploads/users'); File::ensureDirectoryExists($uploadpath);
+            $imageUrl = 'uploads/users/'.$name;
             $img=Image::make($image->getRealPath());
             $img->encode('webp', 90);
             $width = 100;
@@ -118,7 +118,7 @@ class UserController extends Controller
             $img->resize($width, $height, function ($constraint) {
                 $constraint->aspectRatio();
             });
-            $img->save($imageUrl);
+            $img->save($uploadpath . DIRECTORY_SEPARATOR . $name);
             $input['image'] = $imageUrl;
             File::delete($update_data->image);
         }else{
