@@ -271,7 +271,7 @@
                                         </div>
 
                                         <div class="col-md-2 mb-2">
-                                            <label class="form-label">Variant Image</label>
+                                            <label class="form-label">Variant Photos (multiple)</label>
                                             @php
                                                 $variantColorId = ($colorId === 'no_color') ? null : $colorId;
                                                 $variantImages = $edit_data->images->filter(function($img) use ($variantColorId, $sizeIds) {
@@ -291,7 +291,7 @@
                                                 </div>
                                             @endif
                                             <div class="variant-img-upload">
-                                                <input type="file" name="variant_image[{{ $variantIndex }}][image]" class="form-control form-control-sm variant-img-input" accept="image/*">
+                                                <input type="file" name="variant_image[{{ $variantIndex }}][images][]" class="form-control form-control-sm variant-img-input" multiple accept="image/*">
                                                 <div class="variant-img-preview mt-1" style="display:none;">
                                                     <img src="" alt="Preview" class="rounded border" style="max-width:60px;max-height:60px;object-fit:cover;">
                                                     <button type="button" class="btn btn-sm btn-danger variant-img-clear ms-1" title="Remove"><i class="fe-x"></i></button>
@@ -355,9 +355,9 @@
                                         </div>
 
                                         <div class="col-md-2 mb-2">
-                                            <label class="form-label">Variant Image</label>
+                                            <label class="form-label">Variant Photos (multiple)</label>
                                             <div class="variant-img-upload">
-                                                <input type="file" name="variant_image[0][image]" class="form-control form-control-sm variant-img-input" accept="image/*">
+                                                <input type="file" name="variant_image[0][images][]" class="form-control form-control-sm variant-img-input" multiple accept="image/*">
                                                 <div class="variant-img-preview mt-1" style="display:none;">
                                                     <img src="" alt="Preview" class="rounded border" style="max-width:60px;max-height:60px;object-fit:cover;">
                                                     <button type="button" class="btn btn-sm btn-danger variant-img-clear ms-1" title="Remove"><i class="fe-x"></i></button>
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (oldName.includes('[size_id][]')) {
                         $(this).attr('name', 'variant_price[' + variantIndex + '][size_id][]');
                     } else if (oldName.includes('variant_image')) {
-                        $(this).attr('name', 'variant_image[' + variantIndex + '][image]');
+                        $(this).attr('name', 'variant_image[' + variantIndex + '][images][]');
                     } else {
                         $(this).attr('name', oldName.replace(/\[\d+\]/, '[' + variantIndex + ']'));
                     }
@@ -593,7 +593,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Variant Image Preview & Clear
+    // Variant Photos (multiple) Preview & Clear
     $(document).on('change', '.variant-img-input', function() {
         var $input = $(this);
         var $preview = $input.siblings('.variant-img-preview');
@@ -734,14 +734,14 @@ document.addEventListener('DOMContentLoaded', function () {
         $(this).parents(".variant-card").remove();
     });
 
-    // Variant Image Add/Remove
+    // Variant Photos (multiple) Add/Remove
     let variantImgIndex = 1;
     $(".add-variant-image").click(function () {
         let wrapper = $("#variant-image-wrapper");
         let firstRow = wrapper.find(".variant-image-row").first().clone();
         firstRow.find('.select2-container').remove();
         firstRow.find('input[type="file"]').val('');
-        firstRow.find('select').each(function(){
+        firstRow.find('select, input').each(function(){
             let name = $(this).attr('name');
             if (name) $(this).attr('name', name.replace(/\[\d+\]/, '[' + variantImgIndex + ']'));
             $(this).val(null);

@@ -109,7 +109,7 @@ class StorefrontCommerceController extends Controller
                 ...$this->productCard($product),
                 'description' => $product->description,
                 'productCode' => $product->product_code,
-                'images' => $product->images->map(fn ($image) => $this->assetUrl($image->image))->filter()->values(),
+                'images' => $this->productImages($product),
                 'variants' => $product->variantPrices->map(fn ($variant) => [
                     'id' => $variant->id,
                     'colorId' => $variant->color_id,
@@ -119,6 +119,7 @@ class StorefrontCommerceController extends Controller
                     'priceValue' => (float) $variant->price,
                     'price' => $this->money((float) $variant->price),
                     'stock' => (int) $variant->stock,
+                    'images' => $this->variantImages($product, $variant->color_id, $variant->size_id),
                 ])->values(),
                 'wholesalePrices' => $product->wholesalePrices->map(fn ($tier) => [
                     'minQuantity' => (int) $tier->min_quantity,
@@ -168,8 +169,56 @@ class StorefrontCommerceController extends Controller
             return null;
         }
 
+        $path = ltrim($path, '/');
+        if (Str::startsWith($path, 'public/')) {
+            $path = Str::after($path, 'public/');
+        }
+
         return Str::startsWith($path, ['http://', 'https://'])
             ? $path
-            : asset(ltrim($path, '/'));
+            : asset($path);
+    }
+    private function productImages(Product $product): array
+    {
+        $default = $product->images
+            ->filter(fn ($image) => !$image->color_id && !$image->size_id)
+            ->map(fn ($image) => $this->assetUrl($image->image))
+            ->filter()
+            ->values();
+
+        $images = $default->isNotEmpty()
+            ? $default
+            : $product->images->map(fn ($image) => $this->assetUrl($image->image))->filter()->values();
+
+        return $images->all();
+    }
+
+    private function variantImages(Product $product, ?int $colorId, ?int $sizeId): array
+    {
+        $images = $product->images;
+        $matches = fn ($image, $color, $size) =>
+            (int) ($image->color_id ?? 0) === (int) ($color ?? 0)
+            && (int) ($image->size_id ?? 0) === (int) ($size ?? 0);
+
+        $candidates = [];
+        if ($colorId && $sizeId) {
+            $candidates[] = $images->filter(fn ($image) => $matches($image, $colorId, $sizeId));
+        }
+        if ($colorId) {
+            $candidates[] = $images->filter(fn ($image) => $matches($image, $colorId, null));
+        }
+        if ($sizeId) {
+            $candidates[] = $images->filter(fn ($image) => $matches($image, null, $sizeId));
+        }
+        $candidates[] = $images->filter(fn ($image) => $matches($image, null, null));
+
+        foreach ($candidates as $candidate) {
+            $urls = $candidate->map(fn ($image) => $this->assetUrl($image->image))->filter()->values();
+            if ($urls->isNotEmpty()) {
+                return $urls->all();
+            }
+        }
+
+        return array_values(array_filter([$this->assetUrl(optional($product->image)->image)]));
     }
 }

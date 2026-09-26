@@ -142,6 +142,15 @@ class ProductController extends Controller
             'sample_pdf'          => 'nullable|file|mimes:pdf|max:20480', // 20MB
             'download_limit'      => 'nullable|integer|min:1',
             'download_expire_days'=> 'nullable|integer|min:1',
+            'variant_price' => 'nullable|array',
+            'variant_price.*.color_id' => 'nullable|exists:colors,id',
+            'variant_price.*.size_id' => 'nullable|exists:sizes,id',
+            'variant_price.*.price' => 'nullable|numeric|min:0',
+            'variant_price.*.stock' => 'nullable|integer|min:0',
+            'variant_image' => 'nullable|array',
+            'variant_image.*.images' => 'nullable|array',
+            'variant_image.*.images.*' => 'nullable|image|max:5120',
+            'variant_image.*.image' => 'nullable|image|max:5120',
             
             // Wholesale fields
             'is_wholesale'        => 'nullable',
@@ -302,31 +311,8 @@ class ProductController extends Controller
             }
         }
 
-        // VARIANT IMAGES (from Product Variants - variant_image[row_index][image], image_row links to row)
-        if ($request->variant_price && is_array($request->variant_price)) {
-            $savedFiles = [];
-            $doneKeys = [];
-            foreach ($request->variant_price as $idx => $vp) {
-                $imageRow = $vp['image_row'] ?? $idx;
-                $colorId = $vp['color_id'] ?? null;
-                $sizeId = $vp['size_id'] ?? null;
-                if (!$colorId) continue;
-                $file = $request->file("variant_image.{$imageRow}.image");
-                if (!$file) continue;
-                $key = $colorId . '_' . ($sizeId ?: '0');
-                if (isset($doneKeys[$key])) continue;
-                $doneKeys[$key] = true;
-                if (!isset($savedFiles[$imageRow])) {
-                    $savedFiles[$imageRow] = ImageOptimizer::store($file, 'public/uploads/product/');
-                }
-                Productimage::create([
-                    'product_id' => $product->id,
-                    'image'      => $savedFiles[$imageRow],
-                    'color_id'   => $colorId,
-                    'size_id'    => $sizeId ?: null,
-                ]);
-            }
-        }
+        // VARIANT IMAGES
+        $this->storeVariantImages($request, $product);
 
         // WHOLESALE PRICING TIERS
         if ($input['is_wholesale'] && $request->wholesale_price && is_array($request->wholesale_price)) {
@@ -410,6 +396,15 @@ class ProductController extends Controller
             'sample_pdf'          => 'nullable|file|mimes:pdf|max:20480',
             'download_limit'      => 'nullable|integer|min:1',
             'download_expire_days'=> 'nullable|integer|min:1',
+            'variant_price' => 'nullable|array',
+            'variant_price.*.color_id' => 'nullable|exists:colors,id',
+            'variant_price.*.size_id' => 'nullable|exists:sizes,id',
+            'variant_price.*.price' => 'nullable|numeric|min:0',
+            'variant_price.*.stock' => 'nullable|integer|min:0',
+            'variant_image' => 'nullable|array',
+            'variant_image.*.images' => 'nullable|array',
+            'variant_image.*.images.*' => 'nullable|image|max:5120',
+            'variant_image.*.image' => 'nullable|image|max:5120',
             
             // Wholesale fields
             'is_wholesale'        => 'nullable',
@@ -548,31 +543,8 @@ class ProductController extends Controller
             }
         }
 
-        // VARIANT IMAGES (from Product Variants - variant_image[row][image], image_row links to row)
-        if ($request->variant_price && is_array($request->variant_price)) {
-            $savedFiles = [];
-            $doneKeys = [];
-            foreach ($request->variant_price as $idx => $vp) {
-                $imageRow = $vp['image_row'] ?? $idx;
-                $colorId = $vp['color_id'] ?? null;
-                $sizeId = $vp['size_id'] ?? null;
-                if (!$colorId) continue;
-                $file = $request->file("variant_image.{$imageRow}.image");
-                if (!$file) continue;
-                $key = $colorId . '_' . ($sizeId ?: '0');
-                if (isset($doneKeys[$key])) continue;
-                $doneKeys[$key] = true;
-                if (!isset($savedFiles[$imageRow])) {
-                    $savedFiles[$imageRow] = ImageOptimizer::store($file, 'public/uploads/product/');
-                }
-                Productimage::create([
-                    'product_id' => $product->id,
-                    'image'      => $savedFiles[$imageRow],
-                    'color_id'   => $colorId,
-                    'size_id'    => $sizeId ?: null,
-                ]);
-            }
-        }
+        // VARIANT IMAGES
+        $this->storeVariantImages($request, $product);
 
         // VARIANTS UPDATE
         ProductVariantPrice::where('product_id', $product->id)->delete();
@@ -932,6 +904,61 @@ PROMPT;
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 422);
+        }
+    }
+    private function storeVariantImages(Request $request, Product $product): void
+    {
+        if (!$request->variant_price || !is_array($request->variant_price)) {
+            return;
+        }
+
+        $savedFiles = [];
+        $doneKeys = [];
+
+        foreach ($request->variant_price as $variant) {
+            $imageRow = $variant["image_row"] ?? null;
+            $colorId = $variant["color_id"] ?? null;
+            $sizeId = $variant["size_id"] ?? null;
+
+            if (!$colorId && !$sizeId) {
+                continue;
+            }
+
+            $files = $request->file("variant_image.{$imageRow}.images");
+            if (!$files) {
+                $single = $request->file("variant_image.{$imageRow}.image");
+                $files = $single ? [$single] : [];
+            }
+            if (!is_array($files)) {
+                $files = [$files];
+            }
+            if (!$files) {
+                continue;
+            }
+
+            $key = $colorId . "_" . ($sizeId ?: "0");
+            if (isset($doneKeys[$key])) {
+                continue;
+            }
+            $doneKeys[$key] = true;
+
+            if (!array_key_exists($imageRow, $savedFiles)) {
+                $savedFiles[$imageRow] = [];
+                foreach ($files as $file) {
+                    if ($file) {
+                        $savedFiles[$imageRow][] = ImageOptimizer::store($file, "uploads/product/");
+                    }
+                }
+            }
+
+            foreach ($savedFiles[$imageRow] as $savedPath) {
+                Productimage::create([
+                    "product_id" => $product->id,
+                    "image" => $savedPath,
+                    "color_id" => $colorId ?: null,
+                    "size_id" => $sizeId ?: null,
+                ]);
+            }
         }
     }
 }

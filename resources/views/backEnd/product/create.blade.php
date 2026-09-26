@@ -152,9 +152,9 @@
                                         <input type="number" name="variant_price[0][stock]" class="form-control" placeholder="0">
                                     </div>
                                     <div class="col-md-3 mb-2">
-                                        <label class="form-label">Variant Image</label>
+                                        <label class="form-label">Variant Photos (multiple)</label>
                                         <div class="variant-img-upload position-relative">
-                                            <input type="file" name="variant_image[0][image]" class="form-control form-control-sm variant-img-input" accept="image/*">
+                                            <input type="file" name="variant_image[0][images][]" class="form-control form-control-sm variant-img-input" multiple accept="image/*">
                                             <div class="variant-img-preview mt-1" style="display:none;">
                                                 <img src="" alt="Preview" class="rounded border" style="max-width:60px;max-height:60px;object-fit:cover;">
                                                 <button type="button" class="btn btn-sm btn-danger variant-img-clear ms-1" title="Remove"><i class="fe-x"></i></button>
@@ -263,14 +263,14 @@
             // Clear inputs and fix select2
             firstRow.find('.select2-container').remove();
             firstRow.find('input').val('');
-            firstRow.find('select').each(function(){
+            firstRow.find('select, input').each(function(){
                 let oldName = $(this).attr('name');
                 if (oldName) {
                     // Handle size array name
                     if (oldName.includes('[size_id][]')) {
                         $(this).attr('name', 'variant_price[' + variantIndex + '][size_id][]');
                     } else if (oldName.includes('variant_image')) {
-                        $(this).attr('name', 'variant_image[' + variantIndex + '][image]');
+                        $(this).attr('name', 'variant_image[' + variantIndex + '][images][]');
                     } else {
                         $(this).attr('name', oldName.replace(/\[\d+\]/, '[' + variantIndex + ']'));
                     }
@@ -305,7 +305,7 @@
             $(this).parents(".variant-item").remove();
         });
 
-        // Variant Image Preview & Clear
+        // Variant Photos (multiple) Preview & Clear
         $("body").on("change", ".variant-img-input", function() {
             var $input = $(this);
             var $preview = $input.siblings(".variant-img-preview");
