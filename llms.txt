@@ -1,0 +1,47 @@
+# ff-clone
+
+> A Laravel 12 ecommerce application with a Vue 3 and Tailwind CSS storefront and a Laravel admin panel.
+
+## Purpose
+
+Independent Falaq Food-inspired ecommerce implementation. It is not an official Falaq Food service.
+
+## Architecture
+
+- Backend: Laravel 12, PHP 8.2+, Eloquent ORM, MySQL.
+- Storefront: Vue 3 components mounted through Vite, with Tailwind CSS and Blade page shells.
+- Admin: Laravel routes, controllers, Blade views, permissions, and operational modules.
+- Frontend entry points and reusable storefront components are under `resources/js/storefront/`.
+- Database changes are represented by migrations under `database/migrations/`.
+
+## Important routes
+
+- `/` — storefront homepage
+- `/account/login` — customer login
+- `/login` — admin login
+- `/product/{slug}` — product details
+- `/cart` — cart
+- `/checkout` — checkout
+- `/blog` — blog listing
+
+## Development
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+npm install
+npm run build
+php artisan serve
+```
+
+Use `npm run dev` for Vite hot reload. Use `php artisan test` and `npm run build` after relevant changes.
+
+## Data and security
+
+`.env` and `credentials.txt` are local-only and must not be indexed, quoted, or committed. Payment and courier integrations are inactive until explicitly configured with real credentials. Do not infer or expose secrets from the database or filesystem.
+
+## Guidance
+
+Preserve responsive visual fidelity to the reference storefront, reuse existing components, add schema changes through idempotent migrations, and avoid destructive changes to shared data.
